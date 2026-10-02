@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Dienstplaner für S-, T- und F-Dienste mit Ferien, Wünschen, freien Wochenenden und Pensumprüfung über zwei Monate.">
+  <title>Teamplaner</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2317324d'/%3E%3Cpath d='M16 18h32M16 30h32M16 42h32M24 12v38M40 12v38' stroke='%23fff' stroke-width='3'/%3E%3Crect x='27' y='33' width='10' height='7' rx='2' fill='%23f2b75d'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">▦</span><span>Teamplaner</span></div>
+    <div class="top-actions">
+      <label class="month-label" for="month">Planungsmonat</label>
+      <input id="month" type="month" value="2026-10">
+      <button id="generate" class="primary">Plan für zwei Monate erstellen</button>
+    </div>
+  </header>
+  <main class="layout">
+    <aside class="sidebar" aria-label="Planungseinstellungen">
+      <div class="sidebar-head"><h1>Team & Regeln</h1><p>Fünf Personen pro Tag · 1 S, 2 T, 2 F</p><p class="storage-note">Eingaben bleiben in diesem Browser gespeichert.</p></div>
+      <section class="panel" aria-labelledby="team-heading">
+        <div class="section-title"><h2 id="team-heading">Mitarbeitende</h2><button id="add-person" class="text-button">+ Person</button></div>
+        <div id="employee-list" class="employee-list"></div>
+      </section>
+      <section class="panel rules" aria-labelledby="rules-heading">
+        <h2 id="rules-heading">Planungsregeln</h2>
+        <div><strong>8 h 24 min</strong><span>je S-, T- und F-Dienst</span></div>
+        <div><strong>42 h</strong><span>Vollpensum pro Woche</span></div>
+        <div><strong>2</strong><span>komplett freie Wochenenden pro Monat und Person</span></div>
+      </section>
+    </aside>
+    <section class="workspace" aria-labelledby="plan-heading">
+      <div class="workspace-head">
+        <div><p class="eyebrow">MONATSÜBERSICHT</p><h2 id="plan-heading">Oktober 2026</h2><p id="plan-subtitle">Der Plan wird für zwei Monate geprüft.</p></div>
+        <div class="workspace-actions"><button id="previous-month" class="icon-button" aria-label="Vorheriger Monat">‹</button><button id="next-month" class="icon-button" aria-label="Nächster Monat">›</button><button id="export-csv" class="secondary" disabled>CSV exportieren</button><button id="print-plan" class="secondary">A3 drucken</button></div>
+      </div>
+      <div id="summary" class="summary" aria-live="polite"></div>
+      <div id="messages" class="messages" aria-live="polite"></div>
+      <div class="table-scroll"><table id="plan-table"><caption class="sr-only">Dienstplan für den ausgewählten Monat</caption></table></div>
+      <div class="legend"><span><i class="chip chip-f"></i> F Frühdienst</span><span><i class="chip chip-t"></i> T Tagdienst</span><span><i class="chip chip-s"></i> S Spätdienst</span><span><i class="chip chip-v"></i> Ferien</span><span>Leeres Feld: frei</span></div>
+      <section id="balances" class="balances" aria-labelledby="balances-heading"></section>
+    </section>
+  </main>
+  <dialog id="person-dialog" aria-labelledby="dialog-title">
+    <form id="person-form" method="dialog">
+      <div class="dialog-head"><h2 id="dialog-title">Person bearbeiten</h2><button id="close-dialog" type="button" class="icon-button" aria-label="Schliessen">×</button></div>
+      <label>Name<input id="person-name" type="text" maxlength="80" required></label>
+      <label>Pensum (%)<input id="person-percent" type="number" min="10" max="100" step="1" required></label>
+      <label>Ferienwochen pro Jahr<input id="person-vacation-weeks" type="number" min="0" max="12" step="0.5"></label>
+      <fieldset><legend>Wiederkehrend frei gewünscht</legend><div id="weekly-off" class="weekday-picks"></div></fieldset>
+      <label>Einmalig frei gewünscht <small>(Datum, mehrere durch Komma trennen)</small><textarea id="person-off-dates" rows="2" placeholder="2026-10-12, 2026-11-03"></textarea></label>
+      <label>Ferien <small>(von / bis, eine Zeitspanne pro Zeile)</small><textarea id="person-vacation-ranges" rows="3" placeholder="2026-10-19 / 2026-10-25"></textarea></label>
+      <fieldset><legend>Diese Dienste möglichst vermeiden</legend><div class="shift-picks"><label><input type="checkbox" name="avoid" value="S"> S</label><label><input type="checkbox" name="avoid" value="T"> T</label><label><input type="checkbox" name="avoid" value="F"> F</label></div></fieldset>
+      <p id="form-error" class="form-error" role="alert"></p>
+      <div class="dialog-actions"><button id="delete-person" type="button" class="danger">Person entfernen</button><button type="submit" class="primary">Speichern</button></div>
+    </form>
+  </dialog>
+</body>
+</html>
