@@ -8,3 +8,6 @@
 /var/
 /vendor/
 ###< symfony/framework-bundle ###
+
+# Machine-specific PHP library fallback for local development
+/.local-runtime/

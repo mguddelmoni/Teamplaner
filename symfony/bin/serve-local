@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+cd "$(dirname "$0")/.."
+port="${1:-8000}"
+local_php=/usr/local/Cellar/php/8.3.0/bin/php
+local_icu="$PWD/.local-runtime/icu73/lib"
+if [ -x "$local_php" ] && [ -f "$local_icu/libicuio.73.dylib" ]; then
+    export DYLD_LIBRARY_PATH="$local_icu${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}"
+    exec "$local_php" -S "127.0.0.1:${port}" -t public router.php
+fi
+if command -v php >/dev/null 2>&1 && php -r 'exit(PHP_VERSION_ID >= 80200 ? 0 : 1);' >/dev/null 2>&1; then
+    exec php -S "127.0.0.1:${port}" -t public router.php
+fi
+printf '%s\n' 'PHP 8.2+ ist lokal nicht lauffähig. Bitte die PHP-Installation aktualisieren.' >&2
+exit 1

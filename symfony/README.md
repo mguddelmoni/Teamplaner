@@ -11,7 +11,7 @@ Symfony 7.4 (LTS) stellt die deutschsprachige Teamplaner-Oberfläche über eine 
 
 ```sh
 composer install
-php -S 127.0.0.1:8000 -t public router.php
+./bin/serve-local
 ```
 
-Danach `http://127.0.0.1:8000/` öffnen. Für einen Produktionsserver muss der Document Root auf `public/` zeigen; `vendor/`, `var/` und die übrigen Projektdateien dürfen nicht öffentlich auslieferbar sein. Die statisch veröffentlichte Sites-Version liegt weiterhin im übergeordneten `dist/`-Ordner. Sites führt kein PHP aus und hostet diese Symfony-Anwendung daher nicht.
+Danach `http://127.0.0.1:8000/` öffnen. Auf diesem Mac erkennt das Startskript die vorhandene PHP-Installation und verwendet bei Bedarf die lokal vorbereitete ICU-Bibliothek. Auf anderen Rechnern ist nur eine funktionsfähige PHP-Installation nötig. Für einen Produktionsserver muss der Document Root auf `public/` zeigen; `vendor/`, `var/` und die übrigen Projektdateien dürfen nicht öffentlich auslieferbar sein. Die statisch veröffentlichte Sites-Version liegt weiterhin im übergeordneten `dist/`-Ordner. Sites führt kein PHP aus und hostet diese Symfony-Anwendung daher nicht.
