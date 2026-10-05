@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mandantenverwaltung · plandito</title>
+  <link rel="icon" type="image/png" href="/assets/plandito-logo.png">
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body class="manager-page">
+  <header class="manager-header">
+    <div class="brand"><img class="brand-logo" src="/assets/plandito-logo.png" alt="plandito"><span>Mandantenverwaltung</span></div>
+    <form method="post" action="{{ path('manager_logout') }}"><input type="hidden" name="_csrf_token" value="{{ csrf_token('logout') }}"><button class="secondary" type="submit">Abmelden</button></form>
+  </header>
+  <main class="manager-main">
+    <div class="manager-intro"><div><p class="eyebrow">BETREIBERBEREICH</p><h1>Mandanten</h1><p>{{ tenants|length }} Organisationen</p></div></div>
+    {% for message in app.flashes('success') %}<p class="message ok">{{ message }}</p>{% endfor %}
+    {% for message in app.flashes('error') %}<p class="message error" role="alert">{{ message }}</p>{% endfor %}
+    <section class="manager-card">
+      <h2>Alle Mandanten</h2>
+      <div class="manager-table-scroll">
+        <table class="manager-table">
+          <thead><tr><th>Organisation</th><th>Kontakt</th><th>Status</th><th>Laufzeit</th><th>Zugang</th><th>Jahresabo freischalten / verlängern</th><th>Stripe</th></tr></thead>
+          <tbody>
+          {% for tenant in tenants %}
+            <tr>
+              <td><strong>{{ tenant.name }}</strong><small>{{ tenant.slug }}</small></td>
+              <td>{{ tenant.billing_email }}</td>
+              <td><span class="manager-status {{ tenant.is_active ? 'is-active' : 'is-inactive' }}">{{ tenant.is_active ? 'Aktiv' : 'Inaktiv' }}</span></td>
+              <td>{% if tenant.period_start %}{{ tenant.period_start|date('d.m.Y') }} – {% endif %}{% if tenant.period_end %}{{ tenant.period_end|date('d.m.Y') }}{% else %}Noch keine Laufzeit{% endif %}</td>
+              <td class="manager-access-cell">
+                <a href="{{ path('tenant_login', {slug: tenant.slug}) }}">Login: /{{ tenant.slug }}</a>
+                <details><summary>Admin-Passwort zurücksetzen</summary>
+                  <form method="post" action="{{ path('manager_reset_admin_password', {slug: tenant.slug}) }}" class="manager-reset-form">
+                    <label for="admin-password-{{ tenant.slug }}">Neues Passwort</label>
+                    <input id="admin-password-{{ tenant.slug }}" type="password" name="password" minlength="12" maxlength="200" autocomplete="new-password" required>
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('manager_reset_admin_' ~ tenant.slug) }}">
+                    <button class="secondary" type="submit">Passwort setzen</button>
+                  </form>
+                </details>
+              </td>
+              <td>
+                <form method="post" action="{{ path('manager_activate_tenant', {slug: tenant.slug}) }}" class="manager-inline-form">
+                  <label class="sr-only" for="reference-{{ tenant.slug }}">Rechnungsreferenz für {{ tenant.name }}</label>
+                  <input id="reference-{{ tenant.slug }}" name="reference" type="text" placeholder="Rechnungsreferenz" minlength="3" maxlength="80" required>
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token('manager_activate_' ~ tenant.slug) }}">
+                  <button class="secondary" type="submit">+ 1 Jahr</button>
+                </form>
+              </td>
+              <td><button class="secondary" type="button" disabled title="Stripe ist noch nicht verbunden">Zahlungslink senden</button></td>
+            </tr>
+          {% else %}
+            <tr><td colspan="7">Noch keine Mandanten vorhanden.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="manager-note">Freischaltung nur nach geprüfter Zahlung. Eine Referenz kann nur einmal verwendet werden. Stripe-Zahlungslinks sind vorbereitet, aber noch nicht verbunden.</p>
+    </section>
+    <section class="manager-card">
+      <h2>Mandant anlegen</h2>
+      <form method="post" action="{{ path('manager_create_tenant') }}" class="manager-create-form">
+        <label>Organisation<input type="text" name="name" maxlength="100" required></label>
+        <label>Kürzel<input type="text" name="slug" pattern="[a-z0-9][a-z0-9-]{2,39}" placeholder="beispiel-team" required></label>
+        <label>Kontakt-E-Mail<input type="email" name="email" maxlength="254" required></label>
+        <label>Erstes Admin-Passwort<input type="password" name="password" minlength="12" maxlength="200" autocomplete="new-password" required></label>
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token('manager_create_tenant') }}">
+        <button class="primary" type="submit">Mandant anlegen</button>
+      </form>
+      <p class="manager-note">Den Login-Link „/kürzel“ und das vergebene Admin-Passwort sicher an die Organisation übergeben. Der Benutzername lautet „admin“. Das Abo beginnt erst mit der Freischaltung.</p>
+    </section>
+  </main>
+</body>
+</html>

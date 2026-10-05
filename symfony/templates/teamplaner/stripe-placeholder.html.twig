@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ renewal ? 'Abo verlängern' : 'Abo kündigen' }} · plandito</title>
+  <link rel="icon" type="image/png" href="/assets/plandito-logo.png">
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body class="login-page"><main class="login-card">
+  <div class="brand login-brand"><img class="brand-logo" src="/assets/plandito-logo.png" alt="plandito"></div>
+  <h1>{{ renewal ? 'Abo verlängern' : 'Abo kündigen' }}</h1>
+  <p class="message warn">Die Stripe-Anbindung ist noch nicht aktiv. Hier wurde weder eine Zahlung noch eine Kündigung ausgelöst.</p>
+  <p><a href="{{ path('subscription') }}">Zurück zum Jahresabo</a></p>
+</main></body>
+</html>

@@ -3,45 +3,68 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Dienstplaner für S-, T- und F-Dienste mit Ferien, Wünschen, freien Wochenenden und Pensumprüfung über zwei Monate.">
-  <title>Teamplaner</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2317324d'/%3E%3Cpath d='M16 18h32M16 30h32M16 42h32M24 12v38M40 12v38' stroke='%23fff' stroke-width='3'/%3E%3Crect x='27' y='33' width='10' height='7' rx='2' fill='%23f2b75d'/%3E%3C/svg%3E">
+  <meta name="description" content="plandito: Dienstplanung mit anpassbarer Tagesbesetzung, Ferien, Wünschen, freien Wochenenden und Pensumprüfung über zwei Monate.">
+  <title>plandito · Dienstplanung</title>
+  <meta name="csrf-token" content="{{ csrf_token('api') }}">
+  <link rel="icon" type="image/png" href="/assets/plandito-logo.png">
   <link rel="stylesheet" href="/assets/styles.css">
   <script type="module" src="/assets/app.js"></script>
 </head>
-<body>
+<body data-can-edit="{{ is_granted('ROLE_ADMIN') and canWrite ? 'true' : 'false' }}" data-can-write="{{ canWrite ? 'true' : 'false' }}" data-tenant-slug="{{ tenantSlug|e('html_attr') }}" data-person-id="{{ ownPersonId|default('')|e('html_attr') }}" data-username="{{ app.user.userIdentifier|e('html_attr') }}">
   <header class="topbar">
-    <div class="brand"><span class="brand-mark" aria-hidden="true">▦</span><span>Teamplaner</span></div>
+    <div class="brand"><img class="brand-logo" src="/assets/plandito-logo.png" alt="plandito"><span>{{ tenantName }}</span></div>
     <div class="top-actions">
-      <label class="month-label" for="month">Planungsmonat</label>
+      <span class="user-role">{{ is_granted('ROLE_ADMIN') ? 'Admin · Plan bearbeiten' : (app.user.userIdentifier|split('/')|last) ~ ' · eigene Tauschanträge' }}</span>
+      <a class="text-button subscription-link" href="{{ path('subscription') }}">Jahresabo</a>
+      <form method="post" action="{{ path('logout') }}" class="logout-form"><input type="hidden" name="_csrf_token" value="{{ csrf_token('logout') }}"><button type="submit" class="text-button logout-button">Abmelden</button></form>
+      <label class="month-label" for="month">Monat</label>
       <input id="month" type="month" value="2026-10">
       <button id="generate" class="primary">Plan für zwei Monate erstellen</button>
     </div>
   </header>
-  <main class="layout">
-    <aside class="sidebar" aria-label="Planungseinstellungen">
-      <div class="sidebar-head"><h1>Team & Regeln</h1><p>Fünf Personen pro Tag · 1 S, 2 T, 2 F</p><p class="storage-note">Eingaben bleiben in diesem Browser gespeichert.</p></div>
+  <main class="layout" id="page-layout">
+    <aside class="sidebar" id="planning-sidebar" aria-label="Planungseinstellungen">
+      <div class="sidebar-head"><h1>Team & Regeln</h1><p id="staffing-summary">Tagesbesetzung wird geladen …</p><p class="storage-note">Alle Mitarbeitenden sehen denselben Plan. Tausch-Anträge sind nur für eigene Dienste möglich.</p></div>
+      <section class="panel" aria-labelledby="work-model-heading">
+        <div class="section-title"><h2 id="work-model-heading">Arbeitszeitmodell</h2><button id="edit-work-model" class="text-button">Einstellungen</button></div>
+        <p id="work-model-summary" class="staffing-hint"></p>
+      </section>
+      <section class="panel" aria-labelledby="staffing-heading">
+        <div class="section-title"><h2 id="staffing-heading">Besetzung</h2><button id="edit-staffing" class="text-button">Wochenmuster</button></div>
+        <p class="staffing-hint">Standard und wiederkehrende Wochentage. Einzelne Tagesausnahmen lassen sich über „Besetzung“ im Plan ändern.</p>
+        <p id="weekly-summary" class="staffing-hint"></p>
+      </section>
       <section class="panel" aria-labelledby="team-heading">
         <div class="section-title"><h2 id="team-heading">Mitarbeitende</h2><button id="add-person" class="text-button">+ Person</button></div>
         <div id="employee-list" class="employee-list"></div>
       </section>
+      <section class="panel" aria-labelledby="shifts-heading">
+        <div class="section-title"><h2 id="shifts-heading">Diensttypen</h2><button id="add-shift" class="text-button">+ Dienst</button></div>
+        <div id="shift-list" class="shift-list"></div>
+      </section>
       <section class="panel rules" aria-labelledby="rules-heading">
         <h2 id="rules-heading">Planungsregeln</h2>
-        <div><strong>8 h 24 min</strong><span>je S-, T- und F-Dienst</span></div>
-        <div><strong>42 h</strong><span>Vollpensum pro Woche</span></div>
+        <div><strong id="rule-weekly-hours">42 h</strong><span>Vollpensum pro Woche</span></div>
         <div><strong>2</strong><span>komplett freie Wochenenden pro Monat und Person</span></div>
       </section>
     </aside>
     <section class="workspace" aria-labelledby="plan-heading">
+      {% if not canWrite %}<div class="message warn">Die Jahresfreischaltung steht aus oder ist abgelaufen. Der Plan ist lesbar; Änderungen sind gesperrt. <a href="{{ path('subscription') }}">Abo ansehen</a></div>{% endif %}
       <div class="workspace-head">
         <div><p class="eyebrow">MONATSÜBERSICHT</p><h2 id="plan-heading">Oktober 2026</h2><p id="plan-subtitle">Der Plan wird für zwei Monate geprüft.</p></div>
-        <div class="workspace-actions"><button id="previous-month" class="icon-button" aria-label="Vorheriger Monat">‹</button><button id="next-month" class="icon-button" aria-label="Nächster Monat">›</button><button id="export-csv" class="secondary" disabled>CSV exportieren</button><button id="print-plan" class="secondary">A3 drucken</button></div>
+        <div class="workspace-actions"><button id="toggle-sidebar" class="secondary" type="button" aria-controls="planning-sidebar" aria-expanded="true">Einstellungen ausblenden</button><button id="previous-month" class="icon-button" aria-label="Vorheriger Monat">‹</button><button id="next-month" class="icon-button" aria-label="Nächster Monat">›</button><button id="refresh-plan" class="secondary">Aktualisieren</button><button id="export-csv" class="secondary" disabled>CSV exportieren</button><button id="print-plan" class="secondary">A3 drucken</button></div>
       </div>
+      <div id="action-message" class="message" role="status" hidden></div>
       <div id="summary" class="summary" aria-live="polite"></div>
       <div id="messages" class="messages" aria-live="polite"></div>
+      <p class="plan-help">{{ is_granted('ROLE_ADMIN') ? 'Monate bleiben beim Wechsel gespeichert. Dienstzelle anklicken zum Zuweisen, Löschen oder Tauschen; Ziehen tauscht am selben Tag.' : 'Monate bleiben beim Wechsel gespeichert. In deiner eigenen Zeile eine Dienstzelle anklicken und einen Tausch-Antrag stellen.' }}</p>
       <div class="table-scroll"><table id="plan-table"><caption class="sr-only">Dienstplan für den ausgewählten Monat</caption></table></div>
-      <div class="legend"><span><i class="chip chip-f"></i> F Frühdienst</span><span><i class="chip chip-t"></i> T Tagdienst</span><span><i class="chip chip-s"></i> S Spätdienst</span><span><i class="chip chip-v"></i> Ferien</span><span>Leeres Feld: frei</span></div>
+      <div id="shift-legend" class="legend"></div>
       <section id="balances" class="balances" aria-labelledby="balances-heading"></section>
+      <section class="requests" aria-labelledby="requests-heading">
+        <div class="section-title"><h3 id="requests-heading">Tausch-Anträge</h3><span id="request-count"></span></div>
+        <div id="request-list" aria-live="polite"></div>
+      </section>
     </section>
   </main>
   <dialog id="person-dialog" aria-labelledby="dialog-title">
@@ -49,13 +72,80 @@
       <div class="dialog-head"><h2 id="dialog-title">Person bearbeiten</h2><button id="close-dialog" type="button" class="icon-button" aria-label="Schliessen">×</button></div>
       <label>Name<input id="person-name" type="text" maxlength="80" required></label>
       <label>Pensum (%)<input id="person-percent" type="number" min="10" max="100" step="1" required></label>
+      <label>Feste Wochenstunden <small>(optional; ersetzt das Prozentpensum)</small><input id="person-weekly-hours" type="number" min="0.25" max="80" step="0.25" placeholder="Prozentpensum verwenden"></label>
       <label>Ferienwochen pro Jahr<input id="person-vacation-weeks" type="number" min="0" max="12" step="0.5"></label>
       <fieldset><legend>Wiederkehrend frei gewünscht</legend><div id="weekly-off" class="weekday-picks"></div></fieldset>
       <label>Einmalig frei gewünscht <small>(Datum, mehrere durch Komma trennen)</small><textarea id="person-off-dates" rows="2" placeholder="2026-10-12, 2026-11-03"></textarea></label>
       <label>Ferien <small>(von / bis, eine Zeitspanne pro Zeile)</small><textarea id="person-vacation-ranges" rows="3" placeholder="2026-10-19 / 2026-10-25"></textarea></label>
-      <fieldset><legend>Diese Dienste möglichst vermeiden</legend><div class="shift-picks"><label><input type="checkbox" name="avoid" value="S"> S</label><label><input type="checkbox" name="avoid" value="T"> T</label><label><input type="checkbox" name="avoid" value="F"> F</label></div></fieldset>
+      <fieldset><legend>Diese Dienste möglichst vermeiden</legend><div id="avoid-shifts" class="shift-picks"></div></fieldset>
+      <fieldset id="account-fields"><legend>Persönlicher Login</legend><p id="account-status" class="account-hint"></p><label>Benutzername<input id="account-username" type="text" autocomplete="off" maxlength="40" pattern="[a-z0-9][a-z0-9._-]{2,39}"></label><label>Neues Passwort <small>(mindestens 12 Zeichen; bei bestehendem Login leer lassen, um es beizubehalten)</small><input id="account-password" type="password" autocomplete="new-password" minlength="12" maxlength="200"></label><p id="account-error" class="form-error" role="alert"></p><button id="save-account" type="button" class="secondary">Login speichern</button></fieldset>
       <p id="form-error" class="form-error" role="alert"></p>
       <div class="dialog-actions"><button id="delete-person" type="button" class="danger">Person entfernen</button><button type="submit" class="primary">Speichern</button></div>
+    </form>
+  </dialog>
+  <dialog id="shift-dialog" aria-labelledby="shift-dialog-title">
+    <form id="shift-form" method="dialog">
+      <div class="dialog-head"><h2 id="shift-dialog-title">Diensttyp bearbeiten</h2><button id="close-shift" type="button" class="icon-button" aria-label="Schliessen">×</button></div>
+      <label>Kürzel<input id="shift-code" type="text" maxlength="6" pattern="[A-Z][A-Z0-9]{0,5}" required></label>
+      <label>Bezeichnung<input id="shift-name" type="text" maxlength="50" required></label>
+      <div class="time-fields"><label>Beginn <small>(optional)</small><input id="shift-start" type="time"></label><label>Ende <small>(optional)</small><input id="shift-end" type="time"></label><label>Unbezahlte Pause (Min.)<input id="shift-break" type="number" min="0" max="1425" step="1" value="0"></label></div>
+      <p class="staffing-hint">Liegt das Ende vor oder auf dem Beginn, endet der Dienst am Folgetag. Mit Uhrzeiten wird die Arbeitsdauer abzüglich Pause berechnet; ohne Uhrzeiten trägst du die Dauer direkt ein.</p>
+      <label>Arbeitsdauer in Minuten <small>(4 h = 240, 4 h 15 = 255)</small><input id="shift-minutes" type="number" min="15" max="1440" step="1" required></label>
+      <label>Farbe<input id="shift-color" type="color" value="#ece4f7"></label>
+      <label>Kann auch diesen Dienst ersetzen<select id="shift-coverage"></select></label>
+      <label>Besetzungsanteil<select id="shift-weight"><option value="0">Kein Ersatz</option><option value="0.5">Halber Dienst</option><option value="1">Ganzer Dienst</option></select></label>
+      <label>Anteil am Tagespensum<select id="shift-staffing-units"><option value="0">Zählt nicht</option><option value="0.5">0,5</option><option value="1">1</option></select></label>
+      <p class="staffing-hint">Änderungen an der Dauer wirken auch auf die Bilanzen gespeicherter Pläne. Ein verwendeter Diensttyp kann nicht entfernt werden.</p>
+      <p id="shift-error" class="form-error" role="alert"></p>
+      <div class="dialog-actions"><button id="delete-shift-type" type="button" class="danger">Diensttyp entfernen</button><button type="submit" class="primary">Speichern</button></div>
+    </form>
+  </dialog>
+  <dialog id="staffing-dialog" aria-labelledby="staffing-dialog-title">
+    <form id="staffing-form" method="dialog">
+      <div class="dialog-head"><h2 id="staffing-dialog-title">Besetzung & Wochenmuster</h2><button id="close-staffing" type="button" class="icon-button" aria-label="Schliessen">×</button></div>
+      <p>Eine Tagesausnahme hat Vorrang vor dem Wochenmuster; sonst gilt der Standard. Liegt das Tagespensum über dem Dienstschlüssel, ergänzt die Automatik passende Dienste.</p>
+      <div class="staffing-default-fields"><label>Tagespensum <small>(z. B. 4, 5 oder 5,5)</small><input id="staffing-target" type="number" min="0" max="30" step="0.5" required></label>
+      <label>Tages-Dienstschlüssel <small>(Kürzel durch Komma trennen, z. B. F,F,T,T,S)</small><input id="staffing-key" type="text"></label></div>
+      <fieldset><legend>Wiederkehrende Wochentage</legend><p class="staffing-hint">„Standard“ übernimmt die Werte oben. Ein eigenes Tagespensum von 0 mit leerem Schlüssel bedeutet geschlossen.</p><div class="weekly-columns" aria-hidden="true"><span></span><span>Vorgabe</span><span>Tagespensum</span><span>Dienstschlüssel</span></div><div id="weekly-staffing"></div></fieldset>
+      <p id="staffing-error" class="form-error" role="alert"></p>
+      <div class="dialog-actions"><button type="submit" class="primary">Besetzung speichern</button></div>
+    </form>
+  </dialog>
+  <dialog id="day-staffing-dialog" aria-labelledby="day-staffing-title">
+    <form id="day-staffing-form" method="dialog">
+      <div class="dialog-head"><h2 id="day-staffing-title">Tagesbesetzung</h2><button id="close-day-staffing" type="button" class="icon-button" aria-label="Schliessen">×</button></div>
+      <p id="day-staffing-date"></p>
+      <label>Tagespensum<input id="day-staffing-target" type="number" min="0" max="30" step="0.5" required></label>
+      <label>Dienstschlüssel <small>(optional; leer lassen, wenn für diesen Tag kein bestimmter Dienstmix vorgeschrieben ist)</small><input id="day-staffing-key" type="text" placeholder="z. B. F,F,T,T,S"></label>
+      <p id="day-staffing-error" class="form-error" role="alert"></p>
+      <div class="dialog-actions"><button id="reset-day-staffing" type="button" class="secondary">Wochenmuster / Standard verwenden</button><button type="submit" class="primary">Tag speichern</button></div>
+    </form>
+  </dialog>
+  <dialog id="swap-dialog" aria-labelledby="swap-title">
+    <form id="swap-form" method="dialog">
+      <div class="dialog-head"><h2 id="swap-title">Dienst tauschen</h2><button id="close-swap" type="button" class="icon-button" aria-label="Schliessen">×</button></div>
+      <p id="swap-context"></p>
+      <label id="swap-replacement-label">Ersatzperson / Tauschpartner
+        <select id="swap-replacement" required></select>
+      </label>
+      <p id="swap-result" class="swap-result"></p>
+      <label class="agreement"><input id="swap-agreed" type="checkbox" required> Ich bestätige, dass der Tausch mit der Ersatzperson abgesprochen ist.</label>
+      <div id="assignment-actions" class="assignment-actions" hidden><label id="assign-role-label"><span id="assign-role-text">Dienst zuweisen</span><select id="assign-role"></select></label><button id="assign-direct" type="button" class="secondary">Dienst speichern</button><button id="delete-shift" type="button" class="danger">Diesen Dienst löschen</button></div>
+      <p id="swap-error" class="form-error" role="alert"></p>
+      <div class="dialog-actions"><button id="swap-request" type="submit" class="primary">Antrag stellen</button><button id="swap-direct" type="button" class="secondary">Tausch direkt ausführen</button></div>
+    </form>
+  </dialog>
+  <dialog id="work-model-dialog" aria-labelledby="work-model-title">
+    <form id="work-model-form" method="dialog">
+      <div class="dialog-head"><h2 id="work-model-title">Arbeitszeitmodell</h2><button id="close-work-model" type="button" class="icon-button" aria-label="Schliessen">×</button></div>
+      <label>Wochenstunden bei 100 %<input id="work-weekly-hours" type="number" min="0.25" max="80" step="0.25" required></label>
+      <fieldset><legend>Wochentage für die Sollzeit</legend><div id="work-days" class="weekday-picks"></div></fieldset>
+      <p class="staffing-hint">Die Wochenstunden verteilen sich gleichmässig auf diese Tage. Das bestimmt Sollzeit und Feriengutschrift; an welchen Tagen Dienste benötigt werden, legst du unter Besetzung fest.</p>
+      <label>Feiertage ohne Sollzeit <small>(JJJJ-MM-TT, mehrere durch Komma oder Zeilenumbruch trennen)</small><textarea id="work-holidays" rows="3" placeholder="2026-12-25, 2027-01-01"></textarea></label>
+      <p class="staffing-hint">Feiertage reduzieren die Sollzeit und zählen nicht als Ferientage. Die Besetzung bleibt bestehen; für einen geschlossenen Feiertag hinterlege eine Tagesausnahme mit 0.</p>
+      <p class="staffing-hint">Änderungen berechnen auch die angezeigten Bilanzen gespeicherter Monate neu. Bestehende Dienstzuweisungen bleiben erhalten.</p>
+      <p id="work-model-error" class="form-error" role="alert"></p>
+      <div class="dialog-actions"><button type="submit" class="primary">Arbeitszeitmodell speichern</button></div>
     </form>
   </dialog>
 </body>

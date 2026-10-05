@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+cd "$(dirname "$0")/.."
+if ! command -v composer >/dev/null 2>&1; then
+    printf '%s\n' 'Composer ist nicht installiert.' >&2
+    exit 1
+fi
+exec ./bin/php-local "$(command -v composer)" "$@"

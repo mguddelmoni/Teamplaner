@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Anmelden · plandito</title>
+  <link rel="icon" type="image/png" href="/assets/plandito-logo.png">
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body class="login-page">
+  <main class="login-card">
+    <div class="brand login-brand"><img class="brand-logo" src="/assets/plandito-logo.png" alt="plandito"></div>
+    <h1>Anmelden</h1>
+    <p>Für eine Organisation öffne ihre eigene URL, zum Beispiel <strong>/beha</strong>. Dort genügt der normale Benutzername „admin“ oder der persönliche Mitarbeitername.</p>
+    {% if error %}<p class="message error" role="alert">Benutzername oder Passwort ist ungültig.</p>{% endif %}
+    <form method="post" action="{{ path('login') }}" class="login-form">
+      <label>Benutzername <small>für den bisherigen lokalen Plan</small><input type="text" name="_username" value="{{ last_username }}" autocomplete="username" required autofocus></label>
+      <label>Passwort<input type="password" name="_password" autocomplete="current-password" required></label>
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+      <button class="primary" type="submit">Anmelden</button>
+    </form>
+    <p><a href="{{ path('register_tenant') }}">Neue Organisation registrieren</a></p>
+  </main>
+</body>
+</html>

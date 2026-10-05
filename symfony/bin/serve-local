@@ -1,15 +1,26 @@
 #!/bin/sh
 set -eu
 cd "$(dirname "$0")/.."
-port="${1:-8000}"
-local_php=/usr/local/Cellar/php/8.3.0/bin/php
-local_icu="$PWD/.local-runtime/icu73/lib"
-if [ -x "$local_php" ] && [ -f "$local_icu/libicuio.73.dylib" ]; then
-    export DYLD_LIBRARY_PATH="$local_icu${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}"
-    exec "$local_php" -S "127.0.0.1:${port}" -t public router.php
+port="${1:-8877}"
+case "$port" in
+    *[!0-9]*|'') printf '%s\n' 'Bitte einen gültigen Port angeben.' >&2; exit 1 ;;
+esac
+if [ "$port" -lt 1 ] || [ "$port" -gt 65535 ]; then
+    printf '%s\n' 'Der Port muss zwischen 1 und 65535 liegen.' >&2
+    exit 1
 fi
-if command -v php >/dev/null 2>&1 && php -r 'exit(PHP_VERSION_ID >= 80200 ? 0 : 1);' >/dev/null 2>&1; then
-    exec php -S "127.0.0.1:${port}" -t public router.php
+if command -v lsof >/dev/null 2>&1 && lsof -nP -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1; then
+    if command -v curl >/dev/null 2>&1; then
+        login_page="$(curl -fsS --max-time 2 "http://127.0.0.1:$port/login" 2>/dev/null || true)"
+        case "$login_page" in
+            *'<title>Anmelden · plandito</title>'*)
+                printf 'plandito läuft bereits: http://127.0.0.1:%s/\n' "$port"
+                exit 0
+                ;;
+        esac
+    fi
+    printf 'Port %s ist bereits durch einen anderen Server belegt.\n' "$port" >&2
+    exit 1
 fi
-printf '%s\n' 'PHP 8.2+ ist lokal nicht lauffähig. Bitte die PHP-Installation aktualisieren.' >&2
-exit 1
+printf 'plandito starten: http://127.0.0.1:%s/\n' "$port"
+exec ./bin/php-local -S "127.0.0.1:$port" -t public router.php

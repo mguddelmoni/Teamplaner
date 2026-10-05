@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jahresabo · plandito</title>
+  <link rel="icon" type="image/png" href="/assets/plandito-logo.png">
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body class="login-page">
+  <main class="login-card subscription-card">
+    <div class="brand login-brand"><img class="brand-logo" src="/assets/plandito-logo.png" alt="plandito"></div>
+    <h1>Jahresabo</h1>
+    <dl class="subscription-details">
+      <div><dt>Organisation</dt><dd>{{ tenant.name }}</dd></div>
+      <div><dt>Mandantenkürzel</dt><dd>{{ tenant.slug }}</dd></div>
+      {% if tenant.billing_email %}<div><dt>Kontakt-E-Mail</dt><dd>{{ tenant.billing_email }}</dd></div>{% endif %}
+      <div><dt>Status</dt><dd><span class="manager-status {{ canWrite ? 'is-active' : 'is-inactive' }}">{{ canWrite ? 'Aktiv' : 'Inaktiv' }}</span></dd></div>
+      <div><dt>Beginn</dt><dd>{{ tenant.period_start ? tenant.period_start|date('d.m.Y') : 'Noch nicht freigeschaltet' }}</dd></div>
+      <div><dt>Ende</dt><dd>{{ tenant.period_end ? tenant.period_end|date('d.m.Y') : 'Keine Laufzeit hinterlegt' }}</dd></div>
+    </dl>
+    {% if not canWrite %}<p class="message warn">Der Dienstplan bleibt lesbar. Änderungen sind nach Freischaltung des Jahresabos möglich.</p>{% endif %}
+    {% if tenant.slug != 'legacy' %}
+      <div class="subscription-actions">
+        <a class="primary" href="{{ path('subscription_renew') }}">Abo verlängern</a>
+        <a class="secondary" href="{{ path('subscription_cancel') }}">Abo kündigen</a>
+      </div>
+      <p class="manager-note">Die Stripe-Anbindung ist in Vorbereitung. Diese Links lösen derzeit keine Zahlung oder Kündigung aus.</p>
+    {% endif %}
+    <p><a href="{{ path('teamplaner') }}">Zum Dienstplan</a></p>
+  </main>
+</body>
+</html>
